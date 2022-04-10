@@ -1,5 +1,7 @@
-# snak
+# Snak
  A clone of Snake, with music and reactive background effects. Made with PICO-8 and a lot of time, care, and stress.
+ 
+ ![tbicon](https://user-images.githubusercontent.com/74556753/162636501-06abd034-8ca7-4361-8994-8cd8f5327c31.png)
 
 
 I spent way too much time making this. It's a clone of snake, and I'm sure you already know the rules. However, the background reacts in time with the music, and the snake also moves in time with the music. There is also a sprint mechanic, so you're not spending 90% of the game just waiting.

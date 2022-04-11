@@ -1,7 +1,7 @@
 pico-8 cartridge // http://www.pico-8.com
 version 35
 __lua__
---snak v1.6
+--snak v1.7
 --by megabyte112
 
 
@@ -16,7 +16,7 @@ and debug at this point.
 
 splash="🅾️ / z:  start"
 name=""
-version="v1.6"
+version="v1.7"
 title = true
 advance=false
 score = 0
@@ -71,8 +71,13 @@ sprinttime=0
 startsprinttime=0
 sprinting=false
 framessincenote=0
+hinttext=""
+cansave=true
 
 function _init()
+	--allows mouse/kb
+	poke(0x5f2d,1)
+	
 	music(63, 0, 15)
 end
 
@@ -136,7 +141,7 @@ function _update()
 		return
 	end
 	if endgame then
-		if btnp(🅾️) and stat(50)==-1 then
+		if btnp(🅾️) and (stat(50)==-1 or debug) then
 			expanding=false
 			endless=true
 			advance=true
@@ -187,9 +192,12 @@ function _update()
 		startsprinttime=sprinttime
 		title = true
 		version="game saved!"
+		if not cansave then
+			version="debug: save disabled"
+		end
 		name="stage "..phase+1 .." complete!"
 		splash="🅾️ / z: begin stage "..phase+2
-		if btnp(🅾️) and (isending() or stat(50)==-1) and phase<3 then
+		if btnp(🅾️) and (isending() or stat(50)==-1 or debug) and phase<3 then
 			phase+=1
 			music(-1)
 			sfx(19)
@@ -198,6 +206,27 @@ function _update()
 			version=""
 			return
 		end
+	end
+	
+	
+	--[[
+	debug mode:
+	enable using the <end> key,
+	disable with <home> key.
+	
+	allows noclipping, infinite
+	sprint, food consumption (❎),
+	and advanced info.
+	
+	the game cannot be saved once
+	debug mode has been activated.
+	the cartridge must be reset.
+	]]--
+	if stat(28,77) then
+		debug=true
+		cansave=false
+	elseif stat(28,74) then
+		debug=false
 	end
 	--sprint timer
 	if (advance and btn(🅾️) and sprinttime>0) then
@@ -333,11 +362,11 @@ function _update()
 		graceused=true
 	end
 	--eat food
-	if (pos[1]==food[1] and pos[2]==food[2]) or (debug and btnp(❎)) then
+	if (pos[1]==food[1] and pos[2]==food[2]) or (debug and btn(❎) and mobile and advance) then
 		score+=1
 		expanding=true
-		updatemus()
 		spawnfood()
+		updatemus()
 		if sprinttime<840 then
 			sprinttime+=60
 		end
@@ -395,6 +424,7 @@ function _draw()
 	if beatfast  and bgeffect=="flashfast" then cls(bgflashcol) end
 	rectfill(4, 8, 123, 123, fg)
 	rect(3, 7, 124, 124, 7)
+	print(hinttext,hcenter(hinttext),80,5)
 	if beat  and fgeffect=="flash" then rectfill(4, 8, 123, 123, fgflashcol) end
 	if beatfast  and fgeffect=="flashfast" then rectfill(4, 8, 123, 123, fgflashcol) end
 	if fgeffect=="star" then
@@ -438,7 +468,11 @@ function _draw()
 		end
 	end
 	if debug then
-		print("m"..stat(0).." c"..stat(1).." s"..stat(2).." f"..stat(7).." l"..score,1,1,fontcol)
+		print("m"..stat(0).."c"..stat(1).."s"..stat(2).."f"..stat(7).."l"..#body,1,1,7)
+		print("saves disabled until reload",5,118,6)
+		print("<home>: exit debug",5,112,6)
+		print("❎ (hold): eat",5,106,6)
+		print("🅾️: sprint",5,100,6)
 	else
 		print("length: "..score, 10, 1, 7)
 		print("sprint:", 70, 1, 7)
@@ -513,9 +547,37 @@ end
 
 function updatemus()
 	if endless then return end
-	if score == 3 then
+	if score==1 then
+		hinttext="that's snek."
+		food[1]=20
+		food[2]=10
+	elseif score==2 then
+		hinttext="<- this is snak."
+		food[1]=5
+		food[2]=20
+	elseif score == 3 then
+		hinttext="turn on sound."
+		food[1]=19
+		food[2]=16
 		changemus()
-	elseif score == 10 then
+	elseif score==4 then
+		hinttext="don't crash into the wall."
+		food[1]=30
+		food[2]=2
+	elseif score==5 then
+		hinttext="or snek's tail."
+		food[1]=3
+		food[2]=4
+	elseif score==6 then
+		hinttext="🅾️ / z:  sprint"
+		food[1]=28
+		food[2]=24
+	elseif score==7 then
+		hinttext="have fun."
+		food[1]=10
+		food[2]=10
+	elseif score==8 then
+		hinttext=""
 		changemus()
 	elseif score == 20 then
 		changemus()
@@ -1228,6 +1290,9 @@ function effects()
 			radius=11
 		end
 		version="game saved!"
+		if not cansave then
+			version="debug: save disabled"
+		end
 	elseif pattern==46 then
 		name=""
 		splash="snek has eaten snak!"
@@ -1239,7 +1304,7 @@ function effects()
 			splash="megabyte112"
 		else
 			name="made with pico-8"
-			splash="and 1438 lines of code"
+			splash="and 1505 lines of code"
 		end
 	elseif pattern==49 then
 		name="thank you for playing!"
@@ -1273,6 +1338,7 @@ end
 
 function loadstage(stage)
 	rgbsprites=false
+	hinttext=""
 	if endless then rgbsprites=true end
 	changephase=false
 	advance=true
@@ -1370,6 +1436,7 @@ each body section,
 
 ]]--
 function savegame()
+	if not cansave then return end
 	poke(0x4300,0)
 	poke(0x4301, phase+1)
 	poke(0x4302, pos[1])
@@ -1454,10 +1521,10 @@ __gfx__
 00000000000000000000000000000000000000000777777777777777700000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000eeee00006666000009900000777700000000000000000000000000006000000006000000006000000006000000000000000000000000000000000000
-07000000e88200006cc5000097a90000700600000000000000000000000000000000000000000000000000000000000000060000600000000000000000000000
-00700000e88200006cc500009aa90000700600000070000000000000000000000000000000000000000000000000000060000000000600000000000000000000
-00000000222200005555000009900000666600000070000000000000000000000006000000600000060000006000000000000000000000000000000000000000
+00000000eeee00006666000009900000777700000000000000000000000000007000000007000000007000000007000000000000000000000000000000000000
+07000000e88200006cc5000097a90000700600000000000000000000000000000000000000000000000000000000000000070000700000000000000000000000
+00700000e88200006cc500009aa90000700600000070000000000000000000000000000000000000000000000000000070000000000700000000000000000000
+00000000222200005555000009900000666600000070000000000000000000000007000000700000070000007000000000000000000000000000000000000000
 00000000000000000000000000000000000000000070000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
